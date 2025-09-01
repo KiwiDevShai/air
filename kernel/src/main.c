@@ -2,28 +2,50 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <limine.h>
-#include "mem.h"
+#include <flanterm.h>
+#include <flanterm_backends/fb.h>
 
-// Set the base revision to 3, this is recommended as this is the latest
-// base revision described by the Limine boot protocol specification.
-// See specification for further info.
+#include "version.h"
+#include "string.h"
+#include "global.h"
+#include "printk.h"
+#include "idt/idt.h"
+#include "mmu/memmap.h"
+#include "mmu/pmm.h"
+#include "mmu/vmm.h"
+#include "heap/kheap.h"
 
+// Limine Base Revision
 __attribute__((used, section(".limine_requests")))
 static volatile LIMINE_BASE_REVISION(3);
 
-// The Limine requests can be placed anywhere, but it is important that
-// the compiler does not optimise them away, so, usually, they should
-// be made volatile or equivalent, _and_ they should be accessed at least
-// once or marked as used with the "used" attribute as done here.
-
+// Framebuffer request
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0
 };
 
-// Finally, define the start and end markers for the Limine requests.
-// These can also be moved anywhere, to any .c file, as seen fit.
+// Memory map request
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
+    .revision = 0
+};
+
+// HHDM request
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST,
+    .revision = 0
+};
+
+// RSDP request
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST,
+    .revision = 0
+};
 
 __attribute__((used, section(".limine_requests_start")))
 static volatile LIMINE_REQUESTS_START_MARKER;
@@ -31,44 +53,89 @@ static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end")))
 static volatile LIMINE_REQUESTS_END_MARKER;
 
+struct human_size {
+    uint64_t whole;
+    uint64_t fraction; // fraction in hundredths (e.g., .00 to .99)
+    const char *unit;
+};
 
-// Halt and catch fire function.
-static void hcf(void) {
-    for (;;) {
-#if defined (__x86_64__)
-        asm ("hlt");
-#elif defined (__aarch64__) || defined (__riscv)
-        asm ("wfi");
-#elif defined (__loongarch64)
-        asm ("idle 0");
-#endif
+struct human_size human_readable_size(size_t bytes) {
+    struct human_size result = {0};
+
+    if (bytes >= (1ULL << 30)) {
+        result.whole = bytes >> 30;
+        result.fraction = ((bytes & ((1ULL << 30) - 1)) * 100) >> 30;
+        result.unit = "GiB";
+    } else if (bytes >= (1ULL << 20)) {
+        result.whole = bytes >> 20;
+        result.fraction = ((bytes & ((1ULL << 20) - 1)) * 100) >> 20;
+        result.unit = "MiB";
+    } else if (bytes >= (1ULL << 10)) {
+        result.whole = bytes >> 10;
+        result.fraction = ((bytes & ((1ULL << 10) - 1)) * 100) >> 10;
+        result.unit = "KiB";
+    } else {
+        result.whole = bytes;
+        result.fraction = 0;
+        result.unit = "B";
     }
+
+    return result;
 }
 
-// The following will be our kernel's entry point.
-// If renaming kmain() to something else, make sure to change the
-// linker script accordingly.
+// Kernel entry point
 void kmain(void) {
-    // Ensure the bootloader actually understands our base revision (see spec).
-    if (LIMINE_BASE_REVISION_SUPPORTED == false) {
+    if (!LIMINE_BASE_REVISION_SUPPORTED
+        || framebuffer_request.response == NULL
+        || framebuffer_request.response->framebuffer_count < 1) {
         hcf();
     }
 
-    // Ensure we got a framebuffer.
-    if (framebuffer_request.response == NULL
-     || framebuffer_request.response->framebuffer_count < 1) {
+    // Init serial first so we get logs early
+    serial_init();
+    // Setup framebuffer + flanterm
+    if (hhdm_request.response) {
+        g_hhdm_offset = hhdm_request.response->offset;
+    } else {
+        info("No HHDM response from Limine!");
         hcf();
     }
-
-    // Fetch the first framebuffer.
-    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
-
-    // Note: we assume the framebuffer model is RGB with 32-bit pixels.
-    for (size_t i = 0; i < 100; i++) {
-        volatile uint32_t *fb_ptr = framebuffer->address;
-        fb_ptr[i * (framebuffer->pitch / 4) + i] = 0xffffff;
+    if (rsdp_request.response == NULL || rsdp_request.response->address == 0) {
+        err("No RSDP from Limine!");
+        hcf();
     }
+    struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+    g_ft_ctx = flanterm_fb_init(
+        NULL, NULL,
+        fb->address, fb->width, fb->height, fb->pitch,
+        fb->red_mask_size, fb->red_mask_shift,
+        fb->green_mask_size, fb->green_mask_shift,
+        fb->blue_mask_size, fb->blue_mask_shift,
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        NULL, 0, 0, 1, 0, 0, 0
+    );
+    g_rsdp = (uint64_t*)rsdp_request.response->address;
 
-    // We're done, just hang...
+    // Show kernel version
+    printk("%s\n", KERNEL_VERSION_STRING);
+
+    // Initialize IDT
+    idt_init();
+
+    // Init memmap + save HHDM
+    memmap_init(memmap_request.response);
+
+    // Init PMM
+    pmm_init();
+    info("Physical Memory Manager initialized");
+
+    // Init VMM
+    vmm_init();
+    info("Virtual Memory Manager initialized");
+
+    kheap_init_auto();
+    info("Heap initialized");
+
+    // Hang forever for now
     hcf();
 }

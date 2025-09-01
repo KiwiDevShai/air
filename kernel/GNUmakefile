@@ -82,6 +82,8 @@ override CFLAGS += \
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
     -I src \
+    -I third_party \
+    -I third_party/flanterm/src \
     -I limine-protocol/include \
     -isystem freestnd-c-hdrs/include \
     $(CPPFLAGS) \
@@ -172,9 +174,16 @@ override LDFLAGS += \
 # Use "find" to glob all *.c, *.S, and *.asm files in the tree
 # (except the src/arch/* directories, as those are gonna be added
 # in the next step).
+# Base sources (excluding arch-specific).
 override SRCFILES := $(shell find -L src cc-runtime/src -type f -not -path 'src/arch/*' 2>/dev/null | LC_ALL=C sort)
-# Add architecture specific files, if they exist.
+
+# Add arch-specific files, if they exist.
 override SRCFILES += $(shell find -L src/arch/$(ARCH) -type f 2>/dev/null | LC_ALL=C sort)
+
+# Add Flanterm
+override SRCFILES += $(shell find -L third_party/flanterm/src -type f 2>/dev/null | LC_ALL=C sort)
+# Add uACPI
+# override SRCFILES += $(shell find -L third_party/uacpi/source -type f -name '*.c' 2>/dev/null | LC_ALL=C sort)
 # Obtain the object and header dependencies file names.
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))

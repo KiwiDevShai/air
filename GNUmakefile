@@ -5,7 +5,7 @@
 ARCH := x86_64
 
 # Default user QEMU flags. These are appended to the QEMU command calls.
-QEMUFLAGS := -m 2G
+QEMUFLAGS := -m 8G -serial stdio
 
 override IMAGE_NAME := air-$(ARCH)
 
@@ -16,8 +16,34 @@ HOST_CPPFLAGS :=
 HOST_LDFLAGS :=
 HOST_LIBS :=
 
+VERSION_H := kernel/src/version.h
+VERSION := 0.1.0
+
 .PHONY: all
 all: $(IMAGE_NAME).iso
+
+.PHONY: gen-version
+gen-version:
+	@echo "Generating $(VERSION_H)"
+	@rm -f $(VERSION_H)
+	@mkdir -p $(dir $(VERSION_H))
+	@echo '#ifndef VERSION_H' >> $(VERSION_H)
+	@echo '#define VERSION_H' >> $(VERSION_H)
+	@echo '' >> $(VERSION_H)
+	@echo '#define KERNEL_NAME     "air"' >> $(VERSION_H)
+	@echo '#define KERNEL_VERSION  "$(VERSION)"' >> $(VERSION_H)
+	@echo '#define KERNEL_COMMIT   "'$$(git rev-parse --short HEAD 2>/dev/null || echo unknown)'"' >> $(VERSION_H)
+	@echo '#define KERNEL_DIRTY    '$$(test -n "$$(git status --porcelain)" && echo 1 || echo 0) >> $(VERSION_H)
+	@echo '#define KERNEL_BUILD_TS "'$$(date "+%b %d %Y %H:%M:%S")'"' >> $(VERSION_H)
+	@echo '#define KERNEL_ARCH     "$(ARCH)"' >> $(VERSION_H)
+	@echo '' >> $(VERSION_H)
+	@echo '#if KERNEL_DIRTY' >> $(VERSION_H)
+	@echo '#define KERNEL_VERSION_STRING KERNEL_NAME " " KERNEL_VERSION " " KERNEL_COMMIT "-dirty " KERNEL_BUILD_TS " " KERNEL_ARCH' >> $(VERSION_H)
+	@echo '#else' >> $(VERSION_H)
+	@echo '#define KERNEL_VERSION_STRING KERNEL_NAME " " KERNEL_VERSION " " KERNEL_COMMIT " " KERNEL_BUILD_TS " " KERNEL_ARCH' >> $(VERSION_H)
+	@echo '#endif' >> $(VERSION_H)
+	@echo '' >> $(VERSION_H)
+	@echo '#endif' >> $(VERSION_H)
 
 .PHONY: all-hdd
 all-hdd: $(IMAGE_NAME).hdd
@@ -160,7 +186,7 @@ kernel/.deps-obtained:
 	./kernel/get-deps
 
 .PHONY: kernel
-kernel: kernel/.deps-obtained
+kernel: gen-version kernel/.deps-obtained
 	$(MAKE) -C kernel
 
 $(IMAGE_NAME).iso: limine/limine kernel
