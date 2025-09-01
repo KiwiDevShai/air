@@ -1,0 +1,3 @@
+[submodule "kernel/third_party/flanterm"]
+	path = kernel/third_party/flanterm
+	url = https://codeberg.org/mintsuki/flanterm.git
