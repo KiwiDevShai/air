@@ -3,9 +3,9 @@
 
 #define KERNEL_NAME     "air"
 #define KERNEL_VERSION  "0.1.0"
-#define KERNEL_COMMIT   "fc0814e"
+#define KERNEL_COMMIT   "a82a6fb"
 #define KERNEL_DIRTY    1
-#define KERNEL_BUILD_TS "Aug 31 2025 20:41:13"
+#define KERNEL_BUILD_TS "Sep 07 2025 02:51:43"
 #define KERNEL_ARCH     "x86_64"
 
 #if KERNEL_DIRTY

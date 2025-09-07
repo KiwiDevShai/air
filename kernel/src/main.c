@@ -5,8 +5,9 @@
 #include <flanterm.h>
 #include <flanterm_backends/fb.h>
 
+#include "kprint.h"
 #include "version.h"
-#include "string.h"
+#include "serial.h"
 #include "global.h"
 #include "printk.h"
 #include "idt/idt.h"
@@ -14,6 +15,8 @@
 #include "mmu/pmm.h"
 #include "mmu/vmm.h"
 #include "heap/kheap.h"
+#include "font.h"
+#include "ansi.h"
 
 // Limine Base Revision
 __attribute__((used, section(".limine_requests")))
@@ -53,36 +56,6 @@ static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end")))
 static volatile LIMINE_REQUESTS_END_MARKER;
 
-struct human_size {
-    uint64_t whole;
-    uint64_t fraction; // fraction in hundredths (e.g., .00 to .99)
-    const char *unit;
-};
-
-struct human_size human_readable_size(size_t bytes) {
-    struct human_size result = {0};
-
-    if (bytes >= (1ULL << 30)) {
-        result.whole = bytes >> 30;
-        result.fraction = ((bytes & ((1ULL << 30) - 1)) * 100) >> 30;
-        result.unit = "GiB";
-    } else if (bytes >= (1ULL << 20)) {
-        result.whole = bytes >> 20;
-        result.fraction = ((bytes & ((1ULL << 20) - 1)) * 100) >> 20;
-        result.unit = "MiB";
-    } else if (bytes >= (1ULL << 10)) {
-        result.whole = bytes >> 10;
-        result.fraction = ((bytes & ((1ULL << 10) - 1)) * 100) >> 10;
-        result.unit = "KiB";
-    } else {
-        result.whole = bytes;
-        result.fraction = 0;
-        result.unit = "B";
-    }
-
-    return result;
-}
-
 // Kernel entry point
 void kmain(void) {
     if (!LIMINE_BASE_REVISION_SUPPORTED
@@ -97,11 +70,11 @@ void kmain(void) {
     if (hhdm_request.response) {
         g_hhdm_offset = hhdm_request.response->offset;
     } else {
-        info("No HHDM response from Limine!");
+        kprint(LOG_INFO, "No HHDM response from Limine!\n");
         hcf();
     }
     if (rsdp_request.response == NULL || rsdp_request.response->address == 0) {
-        err("No RSDP from Limine!");
+        kprint(LOG_ERR, "No RSDP from Limine!\n");
         hcf();
     }
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
@@ -112,12 +85,12 @@ void kmain(void) {
         fb->green_mask_size, fb->green_mask_shift,
         fb->blue_mask_size, fb->blue_mask_shift,
         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-        NULL, 0, 0, 1, 0, 0, 0
+        (void*)custom_font, 8, 16, 1, 2, 2, 0
     );
     g_rsdp = (uint64_t*)rsdp_request.response->address;
 
     // Show kernel version
-    printk("%s\n", KERNEL_VERSION_STRING);
+    kprint(LOG_INFO, "%s!!\n", KERNEL_VERSION_STRING);
 
     // Initialize IDT
     idt_init();
@@ -127,15 +100,27 @@ void kmain(void) {
 
     // Init PMM
     pmm_init();
-    info("Physical Memory Manager initialized");
+    kprint(LOG_INFO, "Physical Memory Manager initialized\n");
 
     // Init VMM
     vmm_init();
-    info("Virtual Memory Manager initialized");
+    kprint(LOG_INFO, "Virtual Memory Manager initialized\n");
 
     kheap_init_auto();
-    info("Heap initialized");
+    kprint(LOG_INFO, "Heap initialized\n");
 
+    for (int i = 0x20; i <= 0x7E; i++) {
+        const char *color =
+            (i >= '0' && i <= '9') ? ANSI_BRIGHT_CYAN :
+            (i >= 'A' && i <= 'Z') ? ANSI_BRIGHT_YELLOW :
+            (i >= 'a' && i <= 'z') ? ANSI_BRIGHT_GREEN :
+                                    ANSI_BRIGHT_MAGENTA;
+
+        printk(ANSI_BOLD "%s0x", color);
+        if (i < 0x10)
+            printk("0");
+        printk("%x: '%c'" ANSI_RESET "%s", i, (char)i, ((i - 0x1F) % 5 == 0) ? "\n" : " ");
+    }
     // Hang forever for now
     hcf();
 }

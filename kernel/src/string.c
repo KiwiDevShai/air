@@ -189,32 +189,3 @@ void ulltoa(unsigned long long value, char *str, int base) {
     *ptr = '\0';
     reverse_str(str, ptr - 1);
 }
-
-/* ----------------- Serial functions ----------------- */
-#define COM1 0x3F8
-
-static inline int serial_ready(void) {
-    return inb(COM1 + 5) & 0x20;
-}
-
-void serial_init(void) {
-    outb(COM1 + 1, 0x00); // Disable interrupts
-    outb(COM1 + 3, 0x80); // Enable DLAB
-    outb(COM1 + 0, 0x03); // Divisor = 3 → 38400 baud
-    outb(COM1 + 1, 0x00);
-    outb(COM1 + 3, 0x03); // 8n1
-    outb(COM1 + 2, 0xC7); // FIFO, 14-byte threshold
-    outb(COM1 + 4, 0x0B); // IRQs enabled, RTS/DSR set
-}
-
-void serial_putchar(char c) {
-    while (!serial_ready());
-    outb(COM1, c);
-}
-
-void serial_write(const char *s) {
-    while (*s) {
-        if (*s == '\n') serial_putchar('\r'); // CRLF
-        serial_putchar(*s++);
-    }
-}

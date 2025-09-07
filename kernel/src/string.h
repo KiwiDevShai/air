@@ -30,9 +30,4 @@ void utoa(unsigned long long value, char *str, int base);
 void lltoa(long long value, char *str, int base);
 void ulltoa(unsigned long long value, char *str, int base);
 
-/* ----------------- Serial output ----------------- */
-void serial_init(void);
-void serial_putchar(char c);
-void serial_write(const char *s);
-
 #endif /* STRING_H */

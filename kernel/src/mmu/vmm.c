@@ -1,7 +1,5 @@
-// vmm.c
 #include "vmm.h"
 #include "pmm.h"
-#include "memmap.h"
 #include "global.h"
 #include "printk.h"
 

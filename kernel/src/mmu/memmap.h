@@ -11,4 +11,5 @@ struct limine_memmap_entry *memmap_find_biggest_region(void);
 
 /* Dump memmap for debugging */
 void memmap_dump(void);
+
 #endif /* MEMMAP_H */
