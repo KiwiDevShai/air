@@ -18,6 +18,9 @@ extern uint64_t g_hhdm_offset;
 /* Global RSDP pointer */
 extern uint64_t *g_rsdp;
 
+/* Global Framebuffer pointer */
+extern struct limine_framebuffer *g_fb;
+
 /* Kheap ready flag */
 extern bool g_kheap_ready;
 

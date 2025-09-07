@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <limine.h>
 #include <flanterm.h>
-#include <flanterm_backends/fb.h>
 
 #include "kprint.h"
 #include "version.h"
@@ -15,8 +14,9 @@
 #include "mmu/pmm.h"
 #include "mmu/vmm.h"
 #include "heap/kheap.h"
-#include "font.h"
+#include "video/fonts.h"
 #include "ansi.h"
+#include "video/video.h"
 
 // Limine Base Revision
 __attribute__((used, section(".limine_requests")))
@@ -77,16 +77,9 @@ void kmain(void) {
         kprint(LOG_ERR, "No RSDP from Limine!\n");
         hcf();
     }
-    struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
-    g_ft_ctx = flanterm_fb_init(
-        NULL, NULL,
-        fb->address, fb->width, fb->height, fb->pitch,
-        fb->red_mask_size, fb->red_mask_shift,
-        fb->green_mask_size, fb->green_mask_shift,
-        fb->blue_mask_size, fb->blue_mask_shift,
-        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-        (void*)custom_font, 8, 16, 1, 2, 2, 0
-    );
+    // struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+    g_fb = framebuffer_request.response->framebuffers[0];
+    ft_init(NULL, 8, 16, 2, 2);
     g_rsdp = (uint64_t*)rsdp_request.response->address;
 
     // Show kernel version
@@ -109,6 +102,9 @@ void kmain(void) {
     kheap_init_auto();
     kprint(LOG_INFO, "Heap initialized\n");
 
+    ft_set_font((void*)fontosaurus_fnt, 8, 16);
+    kprint(LOG_INFO, "New font initialized\n");
+
     for (int i = 0x20; i <= 0x7E; i++) {
         const char *color =
             (i >= '0' && i <= '9') ? ANSI_BRIGHT_CYAN :
@@ -121,6 +117,7 @@ void kmain(void) {
             printk("0");
         printk("%x: '%c'" ANSI_RESET "%s", i, (char)i, ((i - 0x1F) % 5 == 0) ? "\n" : " ");
     }
+
     // Hang forever for now
     hcf();
 }
