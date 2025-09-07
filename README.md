@@ -1,3 +1,84 @@
 # Air kernel
 
-## A custom kernel using the Limine bootloader
+Air is a hobbyist x86_64 operating system written in C, built on the Limine boot protocol and designed for modularity and clarity.
+It includes framebuffer and serial output, memory management, structured exception handling, and a custom 8x16 font rendered via Flanterm.
+
+## About
+
+Air currently supports:
+
+- Limine boot protocol with framebuffer, HHDM, memmap, and RSDP requests
+- ANSI-formatted framebuffer logging via Flanterm
+- Serial output via 16550 UART
+- Custom 8x16 bitmap font rendering
+- Interrupt Descriptor Table (IDT) setup
+- Structured exception output with full register and state dump
+- Physical Memory Manager (PMM)
+- Virtual Memory Manager (VMM)
+- Kernel heap (kheap) with automatic initialization
+- Inline ASCII and hex character table rendering
+- Memory map debugging via memmap_dump()
+
+## New Updates
+
+Latest commit: `Major project refactor, added kprint(), changed printk(), added custom font.`
+
+- Added kprint() with log-level tagging
+- Refactored printk() for ANSI support
+- Integrated custom bitmap font for Flanterm framebuffer backend
+- Modularized core components:
+  - serial.[c/h], ansi.h, font.h, kprint.[c/h]
+- Removed deprecated quiet_vvm.c
+- Improved startup flow and memory setup
+
+## TODO
+
+- [X] Memory
+	- [X] Parse Limine memory map
+    - [X] Use memory map
+
+- [X] Heap
+	- [X] Implement early kernel heap
+	- [X] Coalesce adjacent free blocks on free
+
+- [ ] Logging and Output
+	- [X] Framebuffer output via Flanterm
+	- [X] Serial UART output
+	- [X] kprint() with log levels
+	- [ ] Add log timestamps or tick count
+	- [ ] Implement log filtering by subsystem
+
+- [ ] Exception Handling
+	- [X] Dump GPRs, RIP, CS, RFLAGS, and stack
+	- [X] Decode page fault error code and CR2
+	- [ ] Detect and show APIC or CPU ID
+	- [ ] Add basic backtrace using frame pointer
+
+- [ ] Interrupts
+	- [X] Set up IDT
+	- [ ] Implement IRQ stubs
+	- [ ] Add timer interrupt handler
+        - [ ] Add PIT timer interrupt handler
+        - [ ] Add HPET timer interrupt handler
+
+- [ ] Structure and Modularity
+	- [X] Move core modules to separate headers and source files
+	- [ ] Add init/ stage abstraction
+	- [ ] Use CONFIG_ flags for optional features
+
+## License
+
+This project is based on the `limine-c-template`
+(previously available at github.com/limine-bootloader/limine-c-template, now unavailable),
+which is licensed under the terms of the 0BSD license.
+
+The `LICENSE` file in this repository contains the original license text.
+All additional code in this project is also provided under the terms of 0BSD.
+
+## Requirements
+
+- GCC cross-compiler targeting x86_64-elf
+- NASM
+- Limine (as submodule or manually installed)
+- QEMU or compatible x86_64 virtual machine
+- Make (project uses GNUmakefile)
