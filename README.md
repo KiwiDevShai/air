@@ -36,10 +36,11 @@ Latest commit: `Major project refactor, added kprint(), changed printk(), added 
 - [X] Memory
 	- [X] Parse Limine memory map
     - [X] Use memory map
+	- [X] Physical Memory Manager
+	- [X] Virtual Memory Manager
 
 - [X] Heap
-	- [X] Implement early kernel heap
-	- [X] Coalesce adjacent free blocks on free
+	- [X] Implement buddy allocator
 
 - [ ] Logging and Output
 	- [X] Framebuffer output via Flanterm
@@ -51,20 +52,15 @@ Latest commit: `Major project refactor, added kprint(), changed printk(), added 
 - [ ] Exception Handling
 	- [X] Dump GPRs, RIP, CS, RFLAGS, and stack
 	- [X] Decode page fault error code and CR2
-	- [ ] Detect and show APIC or CPU ID
+	- [ ] Detect and show CPU ID
 	- [ ] Add basic backtrace using frame pointer
 
 - [ ] Interrupts
 	- [X] Set up IDT
 	- [ ] Implement IRQ stubs
-	- [ ] Add timer interrupt handler
+	- [ ] Add timer interrupt handlers
         - [ ] Add PIT timer interrupt handler
         - [ ] Add HPET timer interrupt handler
-
-- [ ] Structure and Modularity
-	- [X] Move core modules to separate headers and source files
-	- [ ] Add init/ stage abstraction
-	- [ ] Use CONFIG_ flags for optional features
 
 ## License
 
