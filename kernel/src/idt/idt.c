@@ -1,4 +1,6 @@
 #include "idt.h"
+#include "global.h"
+#include "kprint.h"
 
 extern void (*isr_stub_table[256])(void);
 
@@ -33,4 +35,6 @@ void idt_init(void) {
     idtp.base  = (uint64_t)&idt;
 
     __asm__ volatile ("lidt %0" : : "m"(idtp));
+
+    if (debug) kprint(LOG_DEBUG, "Interrupt Descriptor Table initialized\n");
 }

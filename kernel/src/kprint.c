@@ -44,9 +44,9 @@ static const char *log_prefix(log_level_t level) {
         case LOG_WARN:
             return log_prefix_tag("WARN", ANSI_BRIGHT_YELLOW);
         case LOG_ERR:
-            return log_prefix_tag("ERR", ANSI_BRIGHT_RED);
+            return log_prefix_tag("ERR ", ANSI_BRIGHT_RED);
         case LOG_DEBUG:
-            return log_prefix_tag("DEBUG", ANSI_BRIGHT_WHITE);
+            return log_prefix_tag("DBG ", ANSI_BRIGHT_GREEN);
         default:
             return log_prefix_tag("???", ANSI_BRIGHT_MAGENTA);
     }

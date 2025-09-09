@@ -62,6 +62,14 @@ Latest commit: `Major project refactor, added kprint(), changed printk(), added 
         - [ ] Add PIT timer interrupt handler
         - [ ] Add HPET timer interrupt handler
 
+- [ ] Virtual File System (VFS)
+	- [ ] Design abstract VFS interface
+	- [ ] Implement basic in-memory filesystem (ramfs)
+	- [ ] Add file and directory structures
+	- [ ] Add support for path resolution
+	- [ ] Integrate with existing heap/memory system
+	- [ ] Add simple VFS test harness or init-time mounts
+
 ## License
 
 This project is based on the `limine-c-template`

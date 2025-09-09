@@ -1,4 +1,5 @@
 #include "pmm.h"
+#include "kprint.h"
 #include "memmap.h"
 #include "global.h"
 #include "printk.h"
@@ -17,7 +18,7 @@ static size_t total_pages = 0;
 void pmm_init(void) {
     struct limine_memmap_entry *big = memmap_find_biggest_region();
     if (!big) {
-        printk("{RED}PMM: No usable region found!{RESET}\n");
+        kprint(LOG_ERR, "PMM: No usable region found!\n");
         for (;;) asm("hlt");
     }
 
@@ -38,6 +39,7 @@ void pmm_init(void) {
     for (size_t i = used_pages; i < total_pages; i++) {
         BIT_CLEAR(pmm_bitmap, i);
     }
+    if (debug) kprint(LOG_DEBUG, "Physical Memory Manager initialized\n");
 }
 
 uintptr_t pmm_alloc_page(void) {

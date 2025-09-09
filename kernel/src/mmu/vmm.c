@@ -1,4 +1,5 @@
 #include "vmm.h"
+#include "kprint.h"
 #include "pmm.h"
 #include "global.h"
 #include "printk.h"
@@ -34,7 +35,7 @@ static inline void invlpg(uintptr_t addr) {
 static uintptr_t alloc_table(void) {
     uintptr_t phys = pmm_alloc_page();
     if (!phys) {
-        printk("{RED}VMM: out of memory for page tables!{RESET}\n");
+        kprint(LOG_ERR, "VMM: out of memory for page tables!\n");
         for (;;) asm("hlt");
     }
     memset(p2v(phys), 0, PAGE_SIZE);
@@ -74,6 +75,7 @@ static uint64_t *walk(uintptr_t virt, int create) {
 void vmm_map(uintptr_t virt, uintptr_t phys, uint64_t flags) {
     uint64_t *pte = walk(virt, 1);
     *pte = (phys & PAGE_MASK) | flags | VMM_PRESENT;
+    invlpg(virt);
 }
 
 void vmm_unmap(uintptr_t virt) {
@@ -127,4 +129,5 @@ void vmm_init(void) {
     }
 
     vmm_load_cr3(current_pml4);
+    if (debug) kprint(LOG_DEBUG, "Virtual Memory Manager initialized\n");
 }

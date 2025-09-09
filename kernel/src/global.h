@@ -24,6 +24,9 @@ extern struct limine_framebuffer *g_fb;
 /* Kheap ready flag */
 extern bool g_kheap_ready;
 
+/* Debug flag */
+extern bool debug;
+
 /* Helpers */
 static inline void *phys_to_virt(uintptr_t phys) {
     return (void *)(g_hhdm_offset + phys);

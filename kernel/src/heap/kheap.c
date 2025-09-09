@@ -1,4 +1,5 @@
 #include "kheap.h"
+#include "kprint.h"
 #include "mmu/memmap.h"
 #include "mmu/pmm.h"
 #include "mmu/vmm.h"
@@ -39,10 +40,10 @@ static void pmm_reserve_range(uintptr_t phys, size_t length) {
     }
 }
 
-size_t kheap_init_auto(void) {
+size_t kheap_init(void) {
     struct limine_memmap_entry *big = memmap_find_biggest_region();
     if (!big) {
-        printk("{RED}KHEAP: no usable region found!{RESET}\n");
+        kprint(LOG_ERR, "KHEAP: no usable region found!\n");
         return 0;
     }
 
@@ -66,6 +67,7 @@ size_t kheap_init_auto(void) {
     free_list->next = NULL;
 
     g_kheap_ready = true;
+    if (debug) kprint(LOG_DEBUG, "Heap initialized\n");
     return free_list->size;
 }
 

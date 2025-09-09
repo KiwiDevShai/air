@@ -5,7 +5,8 @@
 ARCH := x86_64
 
 # Default user QEMU flags. These are appended to the QEMU command calls.
-QEMUFLAGS := -m 8G -serial stdio
+QEMUFLAGS := -m 8G -serial stdio \
+             -device VGA,xres=800,yres=600
 
 override IMAGE_NAME := air-$(ARCH)
 

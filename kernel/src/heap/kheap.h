@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Initialize heap using biggest usable region from memmap
-size_t kheap_init_auto(void);
+// Initialize heap
+size_t kheap_init(void);
 
 // Core bump allocator
 void *kheap_alloc(size_t size);

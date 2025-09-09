@@ -44,7 +44,7 @@ static inline uint64_t read_cr2(void) {
 }
 
 static void dump_pf_err(uint64_t e) {
-    printk("{YELLOW}  PF err:{RESET} P=%d W/R=%d U/S=%d RSVD=%d I/D=%d PK=%d SS=%d SGX=%d\n",
+    printk("\x1b[33m  PF err:\x1b[0m P=%d W/R=%d U/S=%d RSVD=%d I/D=%d PK=%d SS=%d SGX=%d\n",
            (e>>0)&1, (e>>1)&1, (e>>2)&1, (e>>3)&1, (e>>4)&1,
            (e>>5)&1, (e>>6)&1, (e>>15)&1);
 }
@@ -52,34 +52,34 @@ static void dump_pf_err(uint64_t e) {
 uint64_t isr_common_frame(struct isr_frame *f) {
     const char *name = exc_name(f->int_no);
 
-    printk("\n{RED}{BOLD}*** EXCEPTION ***{RESET} {MAGENTA}%s{RESET} on CPU %d\n", name, (uint64_t)0); // TODO: real CPU id
-    printk("{CYAN}rax{RESET}: 0x%016lx  {CYAN}rbx{RESET}: 0x%016lx  {CYAN}rcx{RESET}: 0x%016lx  {CYAN}rdx{RESET}: 0x%016lx\n",
+    printk("\n\x1b[31m\x1b[1m*** EXCEPTION ***\x1b[0m \x1b[35m%s\x1b[0m on CPU %d\n", name, (uint64_t)0); // TODO: real CPU id
+    printk("\x1b[36mrax\x1b[0m: 0x%016lx  \x1b[36mrbx\x1b[0m: 0x%016lx  \x1b[36mrcx\x1b[0m: 0x%016lx  \x1b[36mrdx\x1b[0m: 0x%016lx\n",
            f->rax, f->rbx, f->rcx, f->rdx);
-    printk("{CYAN}rsi{RESET}: 0x%016lx  {CYAN}rdi{RESET}: 0x%016lx  {CYAN}rbp{RESET}: 0x%016lx  {CYAN}r8 {RESET}: 0x%016lx\n",
+    printk("\x1b[36mrsi\x1b[0m: 0x%016lx  \x1b[36mrdi\x1b[0m: 0x%016lx  \x1b[36mrbp\x1b[0m: 0x%016lx  \x1b[36mr8 \x1b[0m: 0x%016lx\n",
            f->rsi, f->rdi, f->rbp, f->r8);
-    printk("{CYAN}r9 {RESET}: 0x%016lx  {CYAN}r10{RESET}: 0x%016lx  {CYAN}r11{RESET}: 0x%016lx  {CYAN}r12{RESET}: 0x%016lx\n",
+    printk("\x1b[36mr9 \x1b[0m: 0x%016lx  \x1b[36mr10\x1b[0m: 0x%016lx  \x1b[36mr11\x1b[0m: 0x%016lx  \x1b[36mr12\x1b[0m: 0x%016lx\n",
            f->r9, f->r10, f->r11, f->r12);
-    printk("{CYAN}r13{RESET}: 0x%016lx  {CYAN}r14{RESET}: 0x%016lx  {CYAN}r15{RESET}: 0x%016lx\n",
+    printk("\x1b[36mr13\x1b[0m: 0x%016lx  \x1b[36mr14\x1b[0m: 0x%016lx  \x1b[36mr15\x1b[0m: 0x%016lx\n",
            f->r13, f->r14, f->r15);
 
-    printk("{YELLOW}vec{RESET}: %lu  {YELLOW}err{RESET}: %lu\n", f->int_no, f->err_code);
-    printk("{GREEN}RIP{RESET}: 0x%016lx  {GREEN}CS{RESET}: 0x%016lx  {GREEN}RFLAGS{RESET}: 0x%016lx\n",
+    printk("\x1b[33mvec\x1b[0m: %lu  \x1b[33merr\x1b[0m: %lu\n", f->int_no, f->err_code);
+    printk("\x1b[32mRIP\x1b[0m: 0x%016lx  \x1b[32mCS\x1b[0m: 0x%016lx  \x1b[32mRFLAGS\x1b[0m: 0x%016lx\n",
            f->rip, f->cs, f->rflags);
 
     if (f->int_no == 14) {
         uint64_t cr2 = read_cr2();
-        printk("{MAGENTA}CR2{RESET}: 0x%016lx\n", cr2);
+        printk("\x1b[35mCR2\x1b[0m: 0x%016lx\n", cr2);
         dump_pf_err(f->err_code);
     }
 
-    printk("{BOLD}{BLUE}Stack dump (top 16 qwords):{RESET}\n");
+    printk("\x1b[1m\x1b[34mStack dump (top 16 qwords):\x1b[0m\n");
     uint64_t *sp = (uint64_t *)(&f->rflags + 1);
     for (int i = 0; i < 16; i++) {
         printk("  [rsp+%02x] = 0x%016lx\n", i * 8, sp[i]);
     }
 
     if (f->int_no == 3) {
-        printk("{GREEN}#BP Breakpoint caught — continuing execution{RESET}\n");
+        printk("\x1b[32m#BP Breakpoint caught — continuing execution\x1b[0m\n");
         return (uint64_t)f;
     }
 

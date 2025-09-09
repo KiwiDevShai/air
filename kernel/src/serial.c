@@ -27,3 +27,13 @@ void serial_write(const char *s) {
         serial_putchar(*s++);
     }
 }
+
+static inline int serial_received(void) {
+    // Bit 0 of line status register indicates data is ready
+    return inb(COM1 + 5) & 0x01;
+}
+
+char serial_getchar(void) {
+    while (!serial_received());
+    return inb(COM1);
+}
