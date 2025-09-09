@@ -1,4 +1,4 @@
-# Air kernel
+# Air OS
 
 Air is a hobbyist x86_64 operating system written in C, built on the Limine boot protocol and designed for modularity and clarity.
 It includes framebuffer and serial output, memory management, structured exception handling, and a custom 8x16 font rendered via Flanterm.
