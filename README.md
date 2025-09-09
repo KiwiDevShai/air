@@ -21,15 +21,9 @@ Air currently supports:
 
 ## New Updates
 
-Latest commit: `Major project refactor, added kprint(), changed printk(), added custom font.`
+Latest commit: `Moved most printk usage to kprint, added debug mode`
 
-- Added kprint() with log-level tagging
-- Refactored printk() for ANSI support
-- Integrated custom bitmap font for Flanterm framebuffer backend
-- Modularized core components:
-  - serial.[c/h], ansi.h, font.h, kprint.[c/h]
-- Removed deprecated quiet_vvm.c
-- Improved startup flow and memory setup
+It's what the commit said.
 
 ## TODO
 
