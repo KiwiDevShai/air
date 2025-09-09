@@ -26,6 +26,7 @@ extern bool g_kheap_ready;
 
 /* Debug flag */
 extern bool debug;
+#define VLEVEL 4
 
 /* Helpers */
 static inline void *phys_to_virt(uintptr_t phys) {

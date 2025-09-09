@@ -2,7 +2,6 @@
 #include "kprint.h"
 #include "pmm.h"
 #include "global.h"
-#include "printk.h"
 
 #include <string.h>
 #include <stdint.h>

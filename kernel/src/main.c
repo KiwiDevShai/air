@@ -14,14 +14,17 @@
 #include "mmu/pmm.h"
 #include "mmu/vmm.h"
 #include "heap/kheap.h"
+#include "vfs/file.h"
+#include "vfs/fs/ramfs/ramfs.h"
+#include "vfs/vfs.h"
 #include "video/fonts.h"
 #include "video/video.h"
 
-// Limine Base Revision
+// Limine boot protocol requests
+
 __attribute__((used, section(".limine_requests")))
 static volatile LIMINE_BASE_REVISION(3);
 
-// Limine requests
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
@@ -58,11 +61,23 @@ static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end")))
 static volatile LIMINE_REQUESTS_END_MARKER;
 
-// Kernel stack
+// Kernel Stack
+
 __attribute__((aligned(16)))
 uint8_t kernel_stack[16 * 1024 * 1024]; // 16 MiB
 
+// Path Join (no snprintf, no stdio)
+
+static void join_path(char *out, const char *a, const char *b) {
+    size_t len = strlen(a);
+    strcpy(out, a);
+    if (len > 1 && a[len - 1] != '/')
+        strcat(out, "/");
+    strcat(out, b);
+}
+
 // Kernel entry point
+
 void kmain(void) {
     if (!LIMINE_BASE_REVISION_SUPPORTED ||
         framebuffer_request.response == NULL ||
@@ -78,48 +93,55 @@ void kmain(void) {
         : "rsp"
     );
 
-    // Initialize serial output
     serial_init();
 
-    // Check HHDM response
-    if (hhdm_request.response) {
+    if (hhdm_request.response)
         g_hhdm_offset = hhdm_request.response->offset;
-    } else {
-        kprint(LOG_INFO, "No HHDM response from Limine!\n");
+    else {
+        kprint(LOG_ERR, "No HHDM response from Limine!\n");
         hcf();
     }
 
-    // Check RSDP response
     if (!rsdp_request.response || rsdp_request.response->address == 0) {
         kprint(LOG_ERR, "No RSDP from Limine!\n");
         hcf();
     }
 
-    // Initialize framebuffer
     g_fb = framebuffer_request.response->framebuffers[0];
     ft_init(NULL, 8, 16, 0, 0);
-
     g_rsdp = (uint64_t*)rsdp_request.response->address;
 
-    // Command line parsing
     if (!cmdline_request.response || !cmdline_request.response->cmdline) {
-        kprint(LOG_ERR, "Command line response or pointer is NULL!\n");
+        kprint(LOG_ERR, "No command line from Limine!\n");
         hcf();
     }
 
     const char *cmdline = cmdline_request.response->cmdline;
     debug = strstr(cmdline, "debug");
 
-    // Show kernel version
     kprint(LOG_INFO, "%s%s\n", (debug ? "debug-" : ""), KERNEL_VERSION_STRING);
 
-    // Initialize subsystems
+    // Initialize systems
     memmap_init(memmap_request.response);
     idt_init();
     pmm_init();
     vmm_init();
     kheap_init();
+    vfs_init();
 
-    // Hang forever (for now)
+    vfs_register_filesystem(&ramfs_fs);
+    vfs_mount("ramfs", NULL, "/");
+    fcreate("/test.txt", "hello\n", 6);
+
+    int fd = fopen("/test.txt");
+    if (fd >= 0) {
+        char buf[32];
+        ssize_t n = fread(fd, buf, sizeof(buf) - 1);
+        buf[n] = '\0';
+        kprint(LOG_INFO, "Read: %s\n", buf);
+        fclose(fd);
+    }
+
+    // Hang
     hcf();
 }

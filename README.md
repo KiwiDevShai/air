@@ -56,12 +56,37 @@ It's what the commit said.
         - [ ] Add PIT timer interrupt handler
         - [ ] Add HPET timer interrupt handler
 
-- [ ] Virtual File System (VFS)
-	- [ ] Design abstract VFS interface
-	- [ ] Implement basic in-memory filesystem (ramfs)
-	- [ ] Add file and directory structures
-	- [ ] Add support for path resolution
-	- [ ] Integrate with existing heap/memory system
+- [X] Virtual File System (VFS)
+	- [X] Design abstract VFS interface
+	- [ ] Implement several filesystems
+		- [X] RamFS
+			- [X] In-memory storage
+			- [X] File creation
+			- [X] File deletion
+			- [X] Directory creation
+			- [X] Directory deletion
+			- [X] File read
+			- [X] File write
+		- [ ] FAT12
+			- [ ] Boot sector parsing
+			- [ ] FAT table handling
+			- [ ] Root directory navigation
+			- [ ] File read
+		- [ ] FAT16
+			- [ ] Boot sector parsing
+			- [ ] FAT table handling
+			- [ ] Root directory navigation
+			- [ ] File read
+			- [ ] File write
+		- [ ] FAT32
+			- [ ] Extended BPB parsing
+			- [ ] Cluster chain traversal
+			- [ ] Long File Name (LFN) support
+			- [ ] File read
+			- [ ] File write
+	- [X] Add file and directory structures
+	- [X] Add support for path resolution
+	- [X] Integrate with existing heap/memory system
 	- [ ] Add simple VFS test harness or init-time mounts
 
 ## License

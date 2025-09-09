@@ -1,8 +1,8 @@
 #include "printk.h"
 #include "serial.h"
 #include "heap/kheap.h"
-#include "global.h"       // for g_ft_ctx, g_kheap_ready
-#include "string.h"       // for all your homegrown libc knockoffs
+#include "global.h"
+#include "string.h"
 
 #include <flanterm.h>
 #include <stdarg.h>
@@ -64,6 +64,19 @@ static size_t vsnprintf(char *buf, size_t max, const char *fmt, va_list args) {
             fmt++;
         }
 
+        int long_flag = 0;
+        if (*fmt == 'l') {
+            fmt++;
+            long_flag = 1;
+            if (*fmt == 'l') {
+                fmt++;
+                long_flag = 2;
+            }
+        } else if (*fmt == 'z') {
+            fmt++;
+            long_flag = 3;
+        }
+
         switch (*fmt) {
             case 's': {
                 const char *s = va_arg(args, const char *);
@@ -81,18 +94,34 @@ static size_t vsnprintf(char *buf, size_t max, const char *fmt, va_list args) {
                 break;
             }
             case 'd': {
-                int val = va_arg(args, int);
-                append_number(&out, &left, val, 10, width, pad_zero, 1);
+                if (long_flag == 2)
+                    append_number(&out, &left, va_arg(args, long long), 10, width, pad_zero, 1);
+                else if (long_flag == 1)
+                    append_number(&out, &left, va_arg(args, long), 10, width, pad_zero, 1);
+                else
+                    append_number(&out, &left, va_arg(args, int), 10, width, pad_zero, 1);
                 break;
             }
             case 'u': {
-                unsigned int val = va_arg(args, unsigned int);
-                append_number(&out, &left, val, 10, width, pad_zero, 0);
+                if (long_flag == 2)
+                    append_number(&out, &left, va_arg(args, unsigned long long), 10, width, pad_zero, 0);
+                else if (long_flag == 1)
+                    append_number(&out, &left, va_arg(args, unsigned long), 10, width, pad_zero, 0);
+                else if (long_flag == 3)
+                    append_number(&out, &left, va_arg(args, size_t), 10, width, pad_zero, 0);
+                else
+                    append_number(&out, &left, va_arg(args, unsigned int), 10, width, pad_zero, 0);
                 break;
             }
             case 'x': {
-                unsigned int val = va_arg(args, unsigned int);
-                append_number(&out, &left, val, 16, width, pad_zero, 0);
+                if (long_flag == 2)
+                    append_number(&out, &left, va_arg(args, unsigned long long), 16, width, pad_zero, 0);
+                else if (long_flag == 1)
+                    append_number(&out, &left, va_arg(args, unsigned long), 16, width, pad_zero, 0);
+                else if (long_flag == 3)
+                    append_number(&out, &left, va_arg(args, size_t), 16, width, pad_zero, 0);
+                else
+                    append_number(&out, &left, va_arg(args, unsigned int), 16, width, pad_zero, 0);
                 break;
             }
             case 'p': {
