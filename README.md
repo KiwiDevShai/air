@@ -21,9 +21,10 @@ Air currently supports:
 
 ## New Updates
 
-Latest commit: `Moved most printk usage to kprint, added debug mode`
+Latest commit: `Added VFS`
 
-It's what the commit said.
+- Made a VFS
+- Made a RamFS for the VFS
 
 ## TODO
 
