@@ -1,55 +1,67 @@
 #include "kprint.h"
 #include "printk.h"
 #include "ansi.h"
-#include "string.h"  // for strcpy, strlen
+#include "string.h"
+#include "pit/pit.h"
 
-static char prefix_buf[64];
+static char tag_buf[64];
+static char time_buf[64];
 
-static const char *log_prefix_tag(const char *tag, const char *color) {
+static const char *log_prefix_tag_buf(char *buf, const char *tag, const char *color) {
     size_t i = 0;
 
-    // Copy bold white [
-    strcpy(&prefix_buf[i], ANSI_BOLD);
-    i += strlen(ANSI_BOLD);
+    strcpy(&buf[i], ANSI_BOLD);          i += strlen(ANSI_BOLD);
+    strcpy(&buf[i], ANSI_BRIGHT_WHITE);  i += strlen(ANSI_BRIGHT_WHITE);
+    buf[i++] = '[';
 
-    strcpy(&prefix_buf[i], ANSI_BRIGHT_WHITE);
-    i += strlen(ANSI_BRIGHT_WHITE);
+    strcpy(&buf[i], color);              i += strlen(color);
+    strcpy(&buf[i], tag);                i += strlen(tag);
 
-    prefix_buf[i++] = '[';
+    strcpy(&buf[i], ANSI_BRIGHT_WHITE);  i += strlen(ANSI_BRIGHT_WHITE);
+    buf[i++] = ']';
+    buf[i++] = ' ';
+    strcpy(&buf[i], ANSI_RESET);
+    return buf;
+}
 
-    // Add tag color
-    strcpy(&prefix_buf[i], color);
-    i += strlen(color);
+static const char *log_time_prefix(void) {
+    uint64_t ticks = pit_get_ticks();
+    uint64_t sec = ticks / 1000;
+    uint64_t ms = ticks % 1000;
 
-    // Add tag itself
-    strcpy(&prefix_buf[i], tag);
-    i += strlen(tag);
+    char tmp[16], *tp = tmp;
 
-    // Close bracket
-    strcpy(&prefix_buf[i], ANSI_BRIGHT_WHITE);
-    i += strlen(ANSI_BRIGHT_WHITE);
+    ulltoa(sec, tp, 10);
+    tp += strlen(tp);
 
-    prefix_buf[i++] = ']';
-    prefix_buf[i++] = ' ';
+    *tp++ = '.';
 
-    // Reset
-    strcpy(&prefix_buf[i], ANSI_RESET);
-    return prefix_buf;
+    if (ms < 100) *tp++ = '0';
+    if (ms < 10)  *tp++ = '0';
+
+    ulltoa(ms, tp, 10);
+    tp += strlen(tp);
+
+    *tp = '\0';
+
+    return log_prefix_tag_buf(time_buf, tmp, ANSI_BRIGHT_GREEN);
 }
 
 static const char *log_prefix(log_level_t level) {
-    switch (level) {
-        case LOG_INFO:
-            return log_prefix_tag("INFO", ANSI_BRIGHT_CYAN);
-        case LOG_WARN:
-            return log_prefix_tag("WARN", ANSI_BRIGHT_YELLOW);
-        case LOG_ERR:
-            return log_prefix_tag("ERR ", ANSI_BRIGHT_RED);
-        case LOG_DEBUG:
-            return log_prefix_tag("DBG ", ANSI_BRIGHT_GREEN);
-        default:
-            return log_prefix_tag("???", ANSI_BRIGHT_MAGENTA);
-    }
+    const char *color =
+        (level == LOG_INFO)  ? ANSI_BRIGHT_CYAN :
+        (level == LOG_WARN)  ? ANSI_BRIGHT_YELLOW :
+        (level == LOG_ERR)   ? ANSI_BRIGHT_RED :
+        (level == LOG_DEBUG) ? ANSI_BRIGHT_BLUE :
+                                ANSI_BRIGHT_MAGENTA;
+
+    const char *tag =
+        (level == LOG_INFO)  ? "INFO" :
+        (level == LOG_WARN)  ? "WARN" :
+        (level == LOG_ERR)   ? "ERR " :
+        (level == LOG_DEBUG) ? "DBG " : "???";
+
+    return log_prefix_tag_buf(tag_buf, tag, color);
 }
 
 void kprint(log_level_t level, const char *fmt, ...) {
@@ -60,6 +72,9 @@ void kprint(log_level_t level, const char *fmt, ...) {
 }
 
 void vkprint(log_level_t level, const char *fmt, va_list args) {
-    printk("%s", log_prefix(level));
+    const char *ts = log_time_prefix();
+    const char *tag = log_prefix(level);
+
+    printk("%s%s", ts, tag);
     vprintk(fmt, args);
 }

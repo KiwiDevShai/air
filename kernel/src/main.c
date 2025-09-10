@@ -4,7 +4,9 @@
 #include <limine.h>
 #include <flanterm.h>
 
+#include "io.h"
 #include "kprint.h"
+#include "pit/pit.h"
 #include "version.h"
 #include "string.h"
 #include "serial.h"
@@ -66,14 +68,17 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 __attribute__((aligned(16)))
 uint8_t kernel_stack[16 * 1024 * 1024]; // 16 MiB
 
-// Path Join (no snprintf, no stdio)
-
-static void join_path(char *out, const char *a, const char *b) {
-    size_t len = strlen(a);
-    strcpy(out, a);
-    if (len > 1 && a[len - 1] != '/')
-        strcat(out, "/");
-    strcat(out, b);
+void pic_remap(void) {
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0x21, 0x20); // Master offset = 32
+    outb(0xA1, 0x28); // Slave offset = 40
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+    outb(0x21, 0x0); // Unmask all
+    outb(0xA1, 0x0);
 }
 
 // Kernel entry point
@@ -117,6 +122,7 @@ void kmain(void) {
     }
 
     const char *cmdline = cmdline_request.response->cmdline;
+    pic_remap();
     debug = strstr(cmdline, "debug");
 
     kprint(LOG_INFO, "%s%s\n", (debug ? "debug-" : ""), KERNEL_VERSION_STRING);
@@ -124,24 +130,24 @@ void kmain(void) {
     // Initialize systems
     memmap_init(memmap_request.response);
     idt_init();
+    pit_init(1000);
+    __asm__ volatile("sti");
     pmm_init();
     vmm_init();
     kheap_init();
     vfs_init();
-
     vfs_register_filesystem(&ramfs_fs);
     vfs_mount("ramfs", NULL, "/");
-    fcreate("/test.txt", "hello\n", 6);
 
-    int fd = fopen("/test.txt");
-    if (fd >= 0) {
-        char buf[32];
-        ssize_t n = fread(fd, buf, sizeof(buf) - 1);
-        buf[n] = '\0';
-        kprint(LOG_INFO, "Read: %s\n", buf);
-        fclose(fd);
-    }
-
+    kprint(LOG_INFO, "Sleeping for 1 second...\n");
+    pit_sleep(1000);
+    kprint(LOG_WARN, "Halting on 3...\n");
+    pit_sleep(1000);
+    kprint(LOG_WARN, "Halting on 2...\n");
+    pit_sleep(1000);
+    kprint(LOG_WARN, "Halting on 1...\n");
+    pit_sleep(1000);
+    kprint(LOG_WARN, "Halting.\n");
     // Hang
     hcf();
 }

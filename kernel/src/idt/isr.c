@@ -1,17 +1,31 @@
 #include <stdint.h>
 #include "printk.h"
+#include "io.h"
+
+#define MAX_IRQS 16
 
 struct isr_frame {
     uint64_t rax, rcx, rdx, rbx, rbp, rsi, rdi;
     uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
-
     uint64_t int_no;
     uint64_t err_code;
-
     uint64_t rip;
     uint64_t cs;
     uint64_t rflags;
 };
+
+// IRQ Support
+
+typedef void (*irq_handler_t)(void);
+static irq_handler_t irq_handlers[MAX_IRQS] = { 0 };
+
+void irq_register_handler(int irq, irq_handler_t handler) {
+    if (irq < MAX_IRQS) {
+        irq_handlers[irq] = handler;
+    }
+}
+
+// EXCEPTION MESSAGE DECODING
 
 static const char *exc_name(uint64_t v) {
     switch (v) {
@@ -50,9 +64,27 @@ static void dump_pf_err(uint64_t e) {
 }
 
 uint64_t isr_common_frame(struct isr_frame *f) {
+    // IRQ HANDLING
+    if (f->int_no >= 32 && f->int_no < 48) {
+        int irq = f->int_no - 32;
+
+        if (irq < MAX_IRQS && irq_handlers[irq]) {
+            irq_handlers[irq]();
+        }
+
+        // Send End Of Interrupt (EOI)
+        if (f->int_no >= 40) {
+            outb(0xA0, 0x20); // Slave PIC
+        }
+        outb(0x20, 0x20); // Master PIC
+
+        return (uint64_t)f;
+    }
+
+    // EXCEPTION HANDLING
     const char *name = exc_name(f->int_no);
 
-    printk("\n\x1b[31m\x1b[1m*** EXCEPTION ***\x1b[0m \x1b[35m%s\x1b[0m on CPU %d\n", name, (uint64_t)0); // TODO: real CPU id
+    printk("\n\x1b[31m\x1b[1m*** EXCEPTION ***\x1b[0m \x1b[35m%s\x1b[0m on CPU %d\n", name, (uint64_t)0);
     printk("\x1b[36mrax\x1b[0m: 0x%016lx  \x1b[36mrbx\x1b[0m: 0x%016lx  \x1b[36mrcx\x1b[0m: 0x%016lx  \x1b[36mrdx\x1b[0m: 0x%016lx\n",
            f->rax, f->rbx, f->rcx, f->rdx);
     printk("\x1b[36mrsi\x1b[0m: 0x%016lx  \x1b[36mrdi\x1b[0m: 0x%016lx  \x1b[36mrbp\x1b[0m: 0x%016lx  \x1b[36mr8 \x1b[0m: 0x%016lx\n",

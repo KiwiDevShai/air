@@ -11,7 +11,7 @@ static filesystem_t* registered_filesystems[MAX_FILESYSTEMS];
 static mount_t mounts[MAX_MOUNTS];
 
 void vfs_init(void) {
-    if (debug && VLEVEL >= 0) kprint(LOG_DEBUG, "vfs: init()\n");
+    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "vfs: init()\n");
 
     for (int i = 0; i < MAX_FILESYSTEMS; i++)
         registered_filesystems[i] = NULL;
@@ -23,7 +23,8 @@ void vfs_init(void) {
 }
 
 int vfs_register_filesystem(filesystem_t* fs) {
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "vfs: register_filesystem('%s')\n", fs->name);
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "vfs: register_filesystem('%s')\n", fs->name);
 
     for (int i = 0; i < MAX_FILESYSTEMS; i++) {
         if (!registered_filesystems[i]) {
@@ -35,7 +36,8 @@ int vfs_register_filesystem(filesystem_t* fs) {
 }
 
 int vfs_mount(const char* fs_name, void* mount_data, const char* mount_path) {
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "vfs: mount('%s') at '%s'\n", fs_name, mount_path);
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "vfs: mount('%s') at '%s'\n", fs_name, mount_path);
 
     for (int i = 0; i < MAX_FILESYSTEMS; i++) {
         filesystem_t* fs = registered_filesystems[i];
@@ -63,9 +65,9 @@ vfs_node_t* vfs_root(void) {
 }
 
 vfs_node_t* vfs_resolve(const char* path) {
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "vfs: resolve('%s')\n", path);
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "vfs: resolve('%s')\n", path);
 
-    // Find longest mount match
     mount_t* best = NULL;
     size_t best_len = 0;
 
@@ -81,7 +83,6 @@ vfs_node_t* vfs_resolve(const char* path) {
 
     if (!best) return NULL;
 
-    // Parse subpath inside the mount
     path_t parsed;
     path_parse(path + best_len, &parsed);
 
@@ -102,49 +103,62 @@ vfs_node_t* vfs_lookup(const char* path) {
 }
 
 ssize_t vfs_read(vfs_node_t* node, size_t offset, size_t size, void* buffer) {
-    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "vfs: read(%s, %zu, %zu)\n", node ? node->name : "null", offset, size);
+    if (debug && VLEVEL >= 1) 
+        kprint(LOG_DEBUG, "vfs: read(%s, %zu, %zu)\n", node ? node->name : "null", offset, size);
+
     if (!node || !node->ops || !node->ops->read)
         return -1;
     return node->ops->read(node, offset, size, buffer);
 }
 
 ssize_t vfs_write(vfs_node_t* node, size_t offset, size_t size, const void* buffer) {
-    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "vfs: write(%s, %zu, %zu)\n", node ? node->name : "null", offset, size);
+    if (debug && VLEVEL >= 1) 
+        kprint(LOG_DEBUG, "vfs: write(%s, %zu, %zu)\n", node ? node->name : "null", offset, size);
+
     if (!node || !node->ops || !node->ops->write)
         return -1;
     return node->ops->write(node, offset, size, buffer);
 }
 
 int vfs_open(vfs_node_t* node) {
-    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "vfs: open(%s)\n", node ? node->name : "null");
+    if (debug && VLEVEL >= 1) 
+        kprint(LOG_DEBUG, "vfs: open(%s)\n", node ? node->name : "null");
+
     if (!node || !node->ops || !node->ops->open)
         return -1;
     return node->ops->open(node);
 }
 
 int vfs_close(vfs_node_t* node) {
-    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "vfs: close(%s)\n", node ? node->name : "null");
+    if (debug && VLEVEL >= 1) 
+        kprint(LOG_DEBUG, "vfs: close(%s)\n", node ? node->name : "null");
+
     if (!node || !node->ops || !node->ops->close)
         return -1;
     return node->ops->close(node);
 }
 
 int vfs_readdir(vfs_node_t* node, size_t index, vfs_dirent_t* dirent) {
-    if (debug && VLEVEL >= 4) kprint(LOG_DEBUG, "vfs: readdir(%s, %zu)\n", node ? node->name : "null", index);
+    if (debug && VLEVEL >= 4) 
+        kprint(LOG_DEBUG, "vfs: readdir(%s, %zu)\n", node ? node->name : "null", index);
+
     if (!node || !node->ops || !node->ops->readdir)
         return -1;
     return node->ops->readdir(node, index, dirent);
 }
 
 vfs_node_t* vfs_finddir(vfs_node_t* node, const char* name) {
-    if (debug && VLEVEL >= 3) kprint(LOG_DEBUG, "vfs: finddir(%s, '%s')\n", node ? node->name : "null", name);
+    if (debug && VLEVEL >= 3) 
+        kprint(LOG_DEBUG, "vfs: finddir(%s, '%s')\n", node ? node->name : "null", name);
+
     if (!node || !node->ops || !node->ops->finddir)
         return NULL;
     return node->ops->finddir(node, name);
 }
 
 vfs_node_t* vfs_create_file(const char* path, const void* content, size_t size) {
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "vfs: create_file('%s')\n", path);
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "vfs: create_file('%s')\n", path);
 
     char tmp[256];
     strncpy(tmp, path, sizeof(tmp));
@@ -164,7 +178,8 @@ vfs_node_t* vfs_create_file(const char* path, const void* content, size_t size) 
 }
 
 vfs_node_t* vfs_create_dir(const char* path) {
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "vfs: create_dir('%s')\n", path);
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "vfs: create_dir('%s')\n", path);
 
     char tmp[256];
     strncpy(tmp, path, sizeof(tmp));

@@ -47,7 +47,8 @@ static vfs_node_t ramfs_root_node = {
 
 static vfs_node_t* ramfs_mount(void* data) {
     (void)data;
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "ramfs: mount()\n");
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "ramfs: mount()\n");
     return &ramfs_root_node;
 }
 
@@ -60,7 +61,9 @@ filesystem_t ramfs_fs = {
 // Core VFS ops
 static ssize_t ramfs_read(vfs_node_t* node, size_t offset, size_t size, void* buffer) {
     ramfs_file_t* file = (ramfs_file_t*)node->private_data;
-    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "ramfs: read(%s, offset=%zu, size=%zu)\n", file->name, offset, size);
+    if (debug && VLEVEL >= 1) 
+        kprint(LOG_DEBUG, "ramfs: read(%s, offset=%zu, size=%zu)\n", file->name, offset, size);
+
     if (!file || file->is_dir || !file->data) return -1;
     if (offset >= file->size) return 0;
 
@@ -71,7 +74,9 @@ static ssize_t ramfs_read(vfs_node_t* node, size_t offset, size_t size, void* bu
 
 static ssize_t ramfs_write(vfs_node_t* node, size_t offset, size_t size, const void* buffer) {
     ramfs_file_t* file = (ramfs_file_t*)node->private_data;
-    if (debug && VLEVEL >= 1) kprint(LOG_DEBUG, "ramfs: write(%s, offset=%zu, size=%zu)\n", file->name, offset, size);
+    if (debug && VLEVEL >= 1) 
+        kprint(LOG_DEBUG, "ramfs: write(%s, offset=%zu, size=%zu)\n", file->name, offset, size);
+
     if (!file || file->is_dir || !buffer) return -1;
 
     size_t end = offset + size;
@@ -95,7 +100,9 @@ static ssize_t ramfs_write(vfs_node_t* node, size_t offset, size_t size, const v
 
 static int ramfs_readdir(vfs_node_t* node, size_t index, vfs_dirent_t* dirent) {
     ramfs_file_t* dir = (ramfs_file_t*)node->private_data;
-    if (debug && VLEVEL >= 4) kprint(LOG_DEBUG, "ramfs: readdir(%s, index=%zu)\n", dir->name, index);
+    if (debug && VLEVEL >= 4) 
+        kprint(LOG_DEBUG, "ramfs: readdir(%s, index=%zu)\n", dir->name, index);
+
     if (!dir || !dir->is_dir) return -1;
 
     ramfs_file_t* child = dir->children;
@@ -124,7 +131,9 @@ static int ramfs_readdir(vfs_node_t* node, size_t index, vfs_dirent_t* dirent) {
 
 static vfs_node_t* ramfs_finddir(vfs_node_t* node, const char* name) {
     ramfs_file_t* dir = (ramfs_file_t*)node->private_data;
-    if (debug && VLEVEL >= 3) kprint(LOG_DEBUG, "ramfs: finddir(%s in %s)\n", name, dir->name);
+    if (debug && VLEVEL >= 3) 
+        kprint(LOG_DEBUG, "ramfs: finddir(%s in %s)\n", name, dir->name);
+
     if (!dir || !dir->is_dir) return NULL;
 
     ramfs_file_t* child = dir->children;
@@ -149,7 +158,9 @@ static vfs_node_t* ramfs_finddir(vfs_node_t* node, const char* name) {
 
 static vfs_node_t* ramfs_create_node(vfs_node_t* parent_node, const char* name, bool is_dir, const void* content, size_t size) {
     ramfs_file_t* parent = (ramfs_file_t*)parent_node->private_data;
-    if (debug && VLEVEL >= 2) kprint(LOG_DEBUG, "ramfs: create_node(%s, dir=%d)\n", name, is_dir);
+    if (debug && VLEVEL >= 2) 
+        kprint(LOG_DEBUG, "ramfs: create_node(%s, dir=%d)\n", name, is_dir);
+
     if (!parent || !parent->is_dir) return NULL;
 
     ramfs_file_t* file = kmalloc(sizeof(ramfs_file_t));

@@ -1,19 +1,14 @@
 #include "kheap.h"
 #include "kprint.h"
-#include "mmu/memmap.h"
 #include "mmu/pmm.h"
 #include "mmu/vmm.h"
-#include "global.h"
-#include "printk.h"
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
 
-static uintptr_t heap_start_virt = 0;
-static uintptr_t heap_end_virt   = 0;
-
-extern uint8_t *pmm_bitmap;
-extern size_t pmm_bitmap_size;
+#define HEAP_START 0xFFFF800010000000
+#define HEAP_MAX   0xFFFF800020000000 // 256MB of heap space
+#define PAGE_SIZE  0x1000
 
 typedef struct block_header {
     size_t size;
@@ -21,68 +16,68 @@ typedef struct block_header {
     struct block_header *next;
 } block_header_t;
 
+static uintptr_t heap_current = HEAP_START;
 static block_header_t *free_list = NULL;
 
-static inline void pmm_mark_frame_used(size_t frame_idx) {
-    pmm_bitmap[frame_idx >> 3] |= (uint8_t)(1u << (frame_idx & 7u));
-}
-
-static void pmm_reserve_range(uintptr_t phys, size_t length) {
-    if (!pmm_bitmap || !pmm_bitmap_size || !length) return;
-
-    const size_t first = (size_t)(phys / PAGE_SIZE);
-    const size_t pages = (length + (PAGE_SIZE - 1)) / PAGE_SIZE;
-    const size_t max_frames = pmm_bitmap_size * 8u;
-
-    for (size_t i = 0; i < pages; ++i) {
-        size_t f = first + i;
-        if (f < max_frames) pmm_mark_frame_used(f);
+static void grow_heap(size_t required_size) {
+    while (heap_current + required_size > vmm_resolve(heap_current)) {
+        uintptr_t phys = pmm_alloc_page();
+        if (!phys) {
+            kprint(LOG_ERR, "KHEAP: failed to grow heap\n");
+            return;
+        }
+        vmm_map(heap_current, phys, VMM_PRESENT | VMM_WRITE);
+        heap_current += PAGE_SIZE;
     }
 }
 
 size_t kheap_init(void) {
-    struct limine_memmap_entry *big = memmap_find_biggest_region();
-    if (!big) {
-        kprint(LOG_ERR, "KHEAP: no usable region found!\n");
+    heap_current = HEAP_START;
+    // Pre-map 1 page
+    uintptr_t phys = pmm_alloc_page();
+    if (!phys) {
+        kprint(LOG_ERR, "KHEAP: initial page allocation failed\n");
         return 0;
     }
-
-    uintptr_t heap_start_phys = (big->base + 0xFFF) & ~0xFFFULL;
-    size_t available_size  = (size_t)(big->length - (heap_start_phys - big->base));
-
-    size_t heap_size = available_size / 2;
-    const size_t max_heap = 512ULL * 1024 * 1024;
-    if (heap_size > max_heap) heap_size = max_heap;
-
-    uintptr_t heap_end_phys = heap_start_phys + heap_size;
-
-    heap_start_virt = g_hhdm_offset + heap_start_phys;
-    heap_end_virt = g_hhdm_offset + heap_end_phys;
-
-    pmm_reserve_range(heap_start_phys, heap_size);
-
-    free_list = (block_header_t *)heap_start_virt;
-    free_list->size = heap_size - sizeof(block_header_t);
+    vmm_map(heap_current, phys, VMM_PRESENT | VMM_WRITE);
+    free_list = (block_header_t *)heap_current;
+    free_list->size = PAGE_SIZE - sizeof(block_header_t);
     free_list->free = 1;
     free_list->next = NULL;
-
-    g_kheap_ready = true;
-    if (debug) kprint(LOG_DEBUG, "Heap initialized\n");
+    kprint(LOG_DEBUG, "KHEAP: initialized dynamic heap at %p\n", (void *)heap_current);
     return free_list->size;
 }
 
 static void split_block(block_header_t *block, size_t size) {
     if (block->size <= size + sizeof(block_header_t)) return;
 
-    block_header_t *new_block =
-        (block_header_t *)((uintptr_t)block + sizeof(block_header_t) + size);
-
+    block_header_t *new_block = (block_header_t *)((uintptr_t)block + sizeof(block_header_t) + size);
     new_block->size = block->size - size - sizeof(block_header_t);
     new_block->free = 1;
     new_block->next = block->next;
 
     block->size = size;
     block->next = new_block;
+}
+
+static void *request_more_memory(size_t size) {
+    size_t total_size = size + sizeof(block_header_t);
+    total_size = (total_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    uintptr_t alloc_base = heap_current;
+    for (size_t off = 0; off < total_size; off += PAGE_SIZE) {
+        uintptr_t phys = pmm_alloc_page();
+        if (!phys) return NULL;
+        vmm_map(alloc_base + off, phys, VMM_PRESENT | VMM_WRITE);
+    }
+
+    heap_current += total_size;
+
+    block_header_t *block = (block_header_t *)alloc_base;
+    block->size = total_size - sizeof(block_header_t);
+    block->free = 0;
+    block->next = NULL;
+    return (void *)((uintptr_t)block + sizeof(block_header_t));
 }
 
 void *kheap_alloc(size_t size) {
@@ -96,18 +91,24 @@ void *kheap_alloc(size_t size) {
             curr->free = 0;
             return (void *)((uintptr_t)curr + sizeof(block_header_t));
         }
+        if (!curr->next) break;
         curr = curr->next;
     }
 
-    printk("{RED}KHEAP: out of memory!{RESET}\n");
-    return NULL;
+    void *new_block = request_more_memory(size);
+    if (!new_block) {
+        kprint(LOG_ERR, "KHEAP: out of memory!\n");
+        return NULL;
+    }
+
+    curr->next = (block_header_t *)((uintptr_t)new_block - sizeof(block_header_t));
+    return new_block;
 }
 
 void kheap_free(void *ptr) {
     if (!ptr) return;
 
-    block_header_t *block =
-        (block_header_t *)((uintptr_t)ptr - sizeof(block_header_t));
+    block_header_t *block = (block_header_t *)((uintptr_t)ptr - sizeof(block_header_t));
     block->free = 1;
 
     block_header_t *curr = free_list;
@@ -126,15 +127,14 @@ void *kmalloc(size_t size) {
 }
 
 void *kzalloc(size_t size) {
-    void *ptr = kheap_alloc(size);
+    void *ptr = kmalloc(size);
     if (ptr) memset(ptr, 0, size);
     return ptr;
 }
 
 void *kcalloc(size_t n, size_t size) {
     if (n && size && n > (SIZE_MAX / size)) return NULL;
-    size_t total = n * size;
-    return kzalloc(total);
+    return kzalloc(n * size);
 }
 
 void kfree(void *ptr) {

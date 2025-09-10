@@ -21,10 +21,13 @@ Air currently supports:
 
 ## New Updates
 
-Latest commit: `Added VFS`
+Latest commit: `Added PIT handler`
 
-- Made a VFS
-- Made a RamFS for the VFS
+- Added IRQ handling
+- Added PIT handling
+- Modified kprint()
+	- kprint() now uses the PIT
+	- kprint() uses bright blue instead of bright green for LOG_DEBUG
 
 ## TODO
 
