@@ -53,11 +53,11 @@ Latest commit: `Added PIT handler`
 	- [ ] Detect and show CPU ID
 	- [ ] Add basic backtrace using frame pointer
 
-- [ ] Interrupts
+- [X] Interrupts
 	- [X] Set up IDT
-	- [ ] Implement IRQ stubs
-	- [ ] Add timer interrupt handlers
-        - [ ] Add PIT timer interrupt handler
+	- [X] Implement IRQ stubs
+	- [X] Add timer interrupt handlers
+        - [X] Add PIT timer interrupt handler
         - [ ] Add HPET timer interrupt handler
 
 - [X] Virtual File System (VFS)
