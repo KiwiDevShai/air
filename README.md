@@ -44,7 +44,7 @@ Latest commit: `Added PIT handler`
 	- [X] Framebuffer output via Flanterm
 	- [X] Serial UART output
 	- [X] kprint() with log levels
-	- [ ] Add log timestamps or tick count
+	- [X] Add log timestamps or tick count
 	- [ ] Implement log filtering by subsystem
 
 - [ ] Exception Handling
