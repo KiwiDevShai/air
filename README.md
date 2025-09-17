@@ -5,29 +5,25 @@ It includes framebuffer and serial output, memory management, structured excepti
 
 ## About
 
-Air currently supports:
+Air OS currently supports:
 
-- Limine boot protocol with framebuffer, HHDM, memmap, and RSDP requests
-- ANSI-formatted framebuffer logging via Flanterm
 - Serial output via 16550 UART
 - Custom 8x16 bitmap font rendering
 - Interrupt Descriptor Table (IDT) setup
-- Structured exception output with full register and state dump
 - Physical Memory Manager (PMM)
 - Virtual Memory Manager (VMM)
-- Kernel heap (kheap) with automatic initialization
-- Inline ASCII and hex character table rendering
-- Memory map debugging via memmap_dump()
+- Kernel Heap (Kheap) using the Buddy allocator
+- Virtual File System (VFS)
 
 ## New Updates
 
-Latest commit: `Added PIT handler`
+Latest commit: i forgor
 
 - Added IRQ handling
 - Added PIT handling
 - Modified kprint()
-	- kprint() now uses the PIT
-	- kprint() uses bright blue instead of bright green for LOG_DEBUG
+  - kprint() now uses the PIT
+  - kprint() uses bright blue instead of bright green for LOG_DEBUG
 
 ## TODO
 
@@ -93,6 +89,14 @@ Latest commit: `Added PIT handler`
 	- [X] Integrate with existing heap/memory system
 	- [ ] Add simple VFS test harness or init-time mounts
 
+- [ ] Scheduler / Tasking / SMP
+	- [ ] Basic task struct and context switch
+	- [ ] Round-robin or priority-based scheduler
+	- [ ] Support for kernel threads
+	- [ ] Multiprocessing (SMP) initialization
+	- [ ] Inter-processor interrupts (IPI)
+	- [ ] Per-CPU scheduling and run queues
+
 ## License
 
 This project is based on the `limine-c-template`
@@ -104,8 +108,8 @@ All additional code in this project is also provided under the terms of 0BSD.
 
 ## Requirements
 
-- GCC cross-compiler targeting x86_64-elf
+- GCC/CC
 - NASM
-- Limine (as submodule or manually installed)
+- [Limine](https://codeberg.org/Limine/Limine) (bootloader)
 - QEMU or compatible x86_64 virtual machine
-- Make (project uses GNUmakefile)
+- Make

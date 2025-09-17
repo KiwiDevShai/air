@@ -1,4 +1,5 @@
 #include "kheap.h"
+#include "global.h"
 #include "kprint.h"
 #include "mmu/pmm.h"
 #include "mmu/vmm.h"
@@ -7,7 +8,7 @@
 #include <stddef.h>
 
 #define HEAP_START 0xFFFF800010000000
-#define HEAP_MAX   0xFFFF800020000000 // 256MB of heap space
+#define HEAP_MAX   0xFFFF800020000000
 #define PAGE_SIZE  0x1000
 
 typedef struct block_header {
@@ -44,7 +45,7 @@ size_t kheap_init(void) {
     free_list->size = PAGE_SIZE - sizeof(block_header_t);
     free_list->free = 1;
     free_list->next = NULL;
-    kprint(LOG_DEBUG, "KHEAP: initialized dynamic heap at %p\n", (void *)heap_current);
+    if (debug) kprint(LOG_DEBUG, "KHEAP: initialized heap at %p\n", (void *)heap_current);
     return free_list->size;
 }
 

@@ -139,8 +139,6 @@ void kmain(void) {
     vfs_register_filesystem(&ramfs_fs);
     vfs_mount("ramfs", NULL, "/");
 
-    kprint(LOG_INFO, "Sleeping for 1 second...\n");
-    pit_sleep(1000);
     kprint(LOG_WARN, "Halting on 3...\n");
     pit_sleep(1000);
     kprint(LOG_WARN, "Halting on 2...\n");
